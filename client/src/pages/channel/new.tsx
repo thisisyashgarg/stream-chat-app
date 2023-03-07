@@ -9,7 +9,7 @@ import Link from "../../components/Link";
 import { useLoggedInAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
-const NewChannel = () => {
+function NewChannel() {
   const { streamChat, user } = useLoggedInAuth();
   const navigate = useNavigate();
   const createChannel = useMutation({
@@ -22,7 +22,8 @@ const NewChannel = () => {
       memberIds: string[];
       imageUrl?: string;
     }) => {
-      if (streamChat == null) throw Error("Not Connected");
+      if (streamChat == null) throw Error("Not connected");
+
       return streamChat
         .channel("messaging", crypto.randomUUID(), {
           name,
@@ -37,7 +38,7 @@ const NewChannel = () => {
   });
   const nameRef = useRef<HTMLInputElement>(null);
   const imageUrlRef = useRef<HTMLInputElement>(null);
-  const membersIdsRef =
+  const memberIdsRef =
     useRef<SelectInstance<{ label: string; value: string }>>(null);
 
   const users = useQuery({
@@ -46,19 +47,21 @@ const NewChannel = () => {
       streamChat!.queryUsers({ id: { $ne: user.id } }, { name: 1 }),
     enabled: streamChat != null,
   });
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+
     const name = nameRef.current?.value;
     const imageUrl = imageUrlRef.current?.value;
-    const selectOptions = membersIdsRef.current?.getValue();
-
+    const selectOptions = memberIdsRef.current?.getValue();
     if (
       name == null ||
       name === "" ||
       selectOptions == null ||
       selectOptions.length === 0
-    )
+    ) {
       return;
+    }
 
     createChannel.mutate({
       name,
@@ -78,12 +81,12 @@ const NewChannel = () => {
           className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-5 items-center justify-items-end"
         >
           <label htmlFor="name">Name</label>
-          <Input id="name" required pattern="\S*" ref={nameRef} />
-          <label htmlFor="imageUrl">Image URL</label>
-          <Input id="imageUrl" pattern="\S*" ref={imageUrlRef} />
+          <Input id="name" required ref={nameRef} />
+          <label htmlFor="imageUrl">Image Url</label>
+          <Input id="imageUrl" ref={imageUrlRef} />
           <label htmlFor="members">Members</label>
           <Select
-            ref={membersIdsRef}
+            ref={memberIdsRef}
             id="members"
             required
             isMulti
@@ -93,13 +96,12 @@ const NewChannel = () => {
               return { value: user.id, label: user.name || user.id };
             })}
           />
-
           <Button
             disabled={createChannel.isLoading}
-            className="col-span-full "
             type="submit"
+            className="col-span-full"
           >
-            {createChannel.isLoading ? "Loading..." : "Create Channel"}
+            {createChannel.isLoading ? "Loading.." : "Create"}
           </Button>
         </form>
       </FullScreenCard.Body>
@@ -108,6 +110,6 @@ const NewChannel = () => {
       </FullScreenCard.BelowCard>
     </FullScreenCard>
   );
-};
+}
 
 export default NewChannel;

@@ -9,12 +9,14 @@ import { useMutation, UseMutationResult } from "@tanstack/react-query";
 import axios, { AxiosResponse } from "axios";
 import { useNavigate } from "react-router-dom";
 import { StreamChat } from "stream-chat";
+import { useLocalStorage } from "../hooks/useLocalStorage";
 
 type AuthContext = {
   streamChat?: StreamChat;
   user?: User;
   signup: UseMutationResult<AxiosResponse, unknown, User>;
   login: UseMutationResult<{ token: string; user: User }, unknown, string>;
+  logout: UseMutationResult<AxiosResponse, unknown, void>;
 };
 type AuthProviderProps = {
   children: ReactNode;
@@ -31,10 +33,15 @@ export function useAuth() {
   return useContext(Context) as AuthContext;
 }
 
+export function useLoggedInAuth() {
+  return useContext(Context) as AuthContext &
+    Required<Pick<AuthContext, "user">>;
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User>();
-  const [token, setToken] = useState<string>();
+  const [user, setUser] = useLocalStorage<User>("user");
+  const [token, setToken] = useLocalStorage<string>("token");
   const [streamChat, setStreamChat] = useState<StreamChat>();
 
   const signup = useMutation({
@@ -58,6 +65,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     },
   });
 
+  const logout = useMutation({
+    mutationFn: () => {
+      return axios.post(`${import.meta.env.VITE_SERVER_URL}/logout`, { token });
+    },
+    onSuccess() {
+      setUser(undefined);
+      setToken(undefined);
+      setStreamChat(undefined);
+    },
+  });
+
   useEffect(() => {
     if (token == null || user == null) return;
     const chat = new StreamChat(import.meta.env.VITE_STREAM_API_KEY);
@@ -78,7 +96,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [token, user]);
 
   return (
-    <Context.Provider value={{ signup, login, user, streamChat }}>
+    <Context.Provider value={{ signup, login, user, streamChat, logout }}>
       {children}
     </Context.Provider>
   );
